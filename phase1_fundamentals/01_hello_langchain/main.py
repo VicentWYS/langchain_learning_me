@@ -134,6 +134,217 @@ def example_2_messages():
     print(f"\nAI 回复：\n{response2.content}")
 
 
+# ===================================================================================
+# 示例3：使用字典格式的消息
+# ===================================================================================
+def example_3_dict_messages():
+    """
+    示例3：使用字典格式的消息
+
+    LangChain 1.0 支持更简洁的字典格式：
+    {"role": "system"/"user"/"assistant", "content": "消息内容"}
+
+    这种格式与 OpenAI API 的格式一致，更易于使用
+    """
+    print("\n" + "=" * 40)
+    print("示例3：使用字典格式的消息（推荐）")
+    print("=" * 40)
+
+    # model 已经在开头初始化
+
+    # 使用字典格式构建消息
+    messages = [
+        {
+            "role": "system",
+            "content": "你是一名专业的高中数学教师，具有丰富的教学经验。",
+        },
+        {"role": "user", "content": "高中教学包含哪几个重要部分？"},
+    ]
+
+    print("消息列表：")
+
+    for msg in messages:
+        print(f"{msg['role']}:{msg['content']}")
+
+    response = model.invoke(messages)
+
+    print(f"\nAI 回复：\n{response.content}")
+
+
+# ===================================================================================
+# 示例4：配置模型参数
+# ===================================================================================
+def example_4_model_parameters():
+    """
+    示例4：配置模型参数
+
+    init_chat_model 支持的常用参数：
+    - temperature: 控制输出的随机性（0.0-2.0）
+        * 0.0: 最有确定性，输出几乎不变
+        * 1.0: 默认值，平衡创造性和一致性
+        * 2.0: 最随机，最有创造性
+    - max_tokens: 限制输出的最大 token 数量
+    - model_kwargs: 传递给底层模型的额外参数
+    """
+    print("\n" + "=" * 40)
+    print("示例4：配置模型参数")
+    print("=" * 40)
+
+    # 创建一个温度较低的模型（更有确定性）
+    model_deterministic = init_chat_model(
+        model="qwen-plus",
+        model_provider="openai",
+        api_key=QWEN_API_KEY,
+        base_url=QWEN_BASE_URL,
+        temperature=0.0,  # 最有确定性
+        max_tokens=100,  # 限制输出长度
+    )
+
+    prompt = "写一段关于春天景色的描写"
+
+    print(f"提示词：{prompt}")
+    print(f"\n使用 temperature = 0.0 （确定性输出）：")
+
+    # 调用三次，观察输出的一致性
+    for i in range(3):
+        response = model_deterministic.invoke(prompt)
+        print(f"第 {i+1} 次：{response.content}")
+
+    print("\n" + "=" * 40)
+
+    # 创建一个温度较高的模型（更随机）
+    model_creative = init_chat_model(
+        model="qwen-plus",
+        model_provider="openai",
+        api_key=QWEN_API_KEY,
+        base_url=QWEN_BASE_URL,
+        temperature=1.5,  # 更有创造性
+        max_tokens=100,  # 限制输出长度
+    )
+
+    print(f"\n使用 temperature = 1.5 （创造性输出）：")
+
+    # 调用三次，观察输出的差异
+    for i in range(3):
+        response = model_creative.invoke(prompt)
+        print(f"第 {i+1} 次：{response.content}")
+
+
+# ===================================================================================
+# 示例5：理解 invoke 方法的返回值
+# ===================================================================================
+def example_5_response_structure():
+    """
+    示例5：深入理解 invoke 返回值
+
+    invoke 方法返回一个 AIMessage 对象，包含：
+    - content: 模型的文本回复
+    - response_metadata: 响应元数据（如 token 使用量、模型信息等）
+    - additional_kwargs: 额外的关键字参数
+    - id: 消息 ID
+    """
+    print("\n" + "=" * 40)
+    print("示例5：invoke 返回值详解")
+    print("=" * 40)
+
+    # model 已经在开头初始化
+
+    response = model.invoke("用一句话解释什么是递归")
+
+    print(f"1. 主要内容（content）：")
+    print(f"    {response.content}\n")
+
+    print(f"2. 响应元数据（response_metadata）：")
+    for key, value in response.response_metadata.items():
+        print(f"{key}: {value}")
+
+    print(f"\n3. 消息类型：{type(response).__name__}")
+    print(f"\n4. 消息 ID：{response.id}")
+
+    # 检查 token 使用情况（如果可用）
+    # 如果键存在，返回值，否则返回 N/A
+    if "token_usage" in response.response_metadata:
+        usage = response.response_metadata["token_usage"]
+        print(f"\n5. Token 使用情况")
+        print(f"    提示 tokens: {usage.get('prompt_tokens', 'N/A')}")
+        print(f"    完成 tokens: {usage.get('completion_tokens', 'N/A')}")
+        print(f"    总计 tokens: {usage.get('total_tokens', 'N/A')}")
+
+
+# ===================================================================================
+# 示例6：错误处理
+# ===================================================================================
+def example_6_error_handling():
+    """
+    示例6：正确的错误处理
+
+    在实际应用中，应该处理可能的错误：
+    - API 密钥无效
+    - 网络连接问题
+    - 速率限制
+    - 模型不可用
+    """
+    print("\n" + "=" * 40)
+    print("示例6：错误处理最佳实践")
+    print("=" * 40)
+
+    try:
+        # 模型已经在开头初始化
+
+        response = model.invoke("请用一句话介绍什么是智能体")
+        print(f"成功调用模型！")
+        print(f"AI 回复：{response.content}")
+
+    except ValueError as e:
+        print(f"配置错误：{e}")
+
+    except ConnectionError as e:
+        print(f"网络错误：{e}")
+
+    except Exception as e:
+        print(f"未知错误：{type(e).__name__}: {e}")
+
+
+# ===================================================================================
+# 示例7：多模型对比
+# ===================================================================================
+def example_7_multiple_models():
+    """
+    示例7：使用不同的模型
+
+    LangChain 1.0 的优势是可以轻松切换不同的模型提供商
+    只需要修改模型字符串：
+    - "groq:llama-3.3-70b-versatile"
+    - "groq:mixtral-8x7b-32768"
+    - "groq:gemma2-9b-it"
+    """
+    print("\n" + "=" * 40)
+    print("示例 7：对比不同模型的输出")
+    print("=" * 40)
+
+    # Groq 上可用的不同模型
+    models_to_test = [
+        "groq:llama-3.3-70b-versatile",
+        "groq:mixtral-8x7b-32768",
+    ]
+
+    prompt = "用一句话解释什么是智能体"
+    print(f"提示词：{prompt}\n")
+
+    for model_name in models_to_test:
+        try:
+            print(f"\n使用模型：{model_name}")
+            print("=" * 40)
+
+            # 模型已经在开头初始化
+
+            response = model.invoke(prompt)
+            print(f"回复：{response.content}")
+
+        except Exception as e:
+            print(f"模型 {model_name} 调用失败：{e}")
+
+
 def main():
     """
     主程序：运行所有实例
@@ -146,6 +357,11 @@ def main():
         # 运行所有示例
         example_1_simple_invoke()
         example_2_messages()
+        example_3_dict_messages()
+        example_4_model_parameters()
+        example_5_response_structure()
+        example_6_error_handling()
+        example_7_multiple_models()
 
         print("\n" + "=" * 80)
         print("所有示例运行完成！")
