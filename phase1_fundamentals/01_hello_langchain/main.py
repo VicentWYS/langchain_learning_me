@@ -8,9 +8,6 @@ LangChain 1.0 基础教程 - 第一个 LLM 调用
 2. invoke - 同步调用模型
 3. Messages - 消息类型（System, Human, AI）
 4. 基本配置和参数
-
-作者：snape
-日期：2026-01-14
 """
 
 import os
@@ -45,7 +42,7 @@ if not QWEN_BASE_URL or QWEN_BASE_URL == "your_qwen_base_url_here":
 
 
 # 初始化模型
-# init_chat_model 是langchain 1.0 提供的标准跨厂商统一模型入口工厂函数，是所有模型统一入口
+# init_chat_model 是LangChain 1.0 提供的标准跨厂商统一模型入口工厂函数，是所有模型统一入口
 # LangChain 会自动帮你选择对应厂商的 ChatModel 类，并完成实例化
 # Qwen 不是 OpenAI 协议直连，需要走 OpenAI-compatible endpoint，这一步很多人会踩坑
 # LangChain 1.x 不再关心“你是什么模型”，只关心协议。Qwen 是 OpenAI 协议伪装模型
@@ -347,7 +344,7 @@ def example_7_multiple_models():
 
 def main():
     """
-    主程序：运行所有实例
+    主程序：运行所有示例
     """
     print("\n" + "=" * 80)
     print(" LangChain 1.0 基础教程 - 第一个 LLM 调用")
