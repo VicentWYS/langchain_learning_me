@@ -59,7 +59,7 @@ for key, value in student.items():
 print("\n===== 6. 判断 key 是否存在 =====")
 
 print("name" in student)  # 输出：True
-print("age" in student)   # 输出：False
+print("age" in student)  # 输出：False
 
 print("\n===== 7. 字典长度 =====")
 
@@ -67,10 +67,7 @@ print(len(student))  # 输出字典中键值对的数量
 
 print("\n===== 8. 字典嵌套（非常重要，项目中大量使用） =====")
 
-users = {
-    "user1": {"name": "Alice", "age": 20},
-    "user2": {"name": "Bob", "age": 25}
-}
+users = {"user1": {"name": "Alice", "age": 20}, "user2": {"name": "Bob", "age": 25}}
 
 print(users["user1"]["name"])  # 输出：Alice
 
@@ -95,7 +92,7 @@ print(student)  # name 仍然是 Alice
 print("\n===== 11. 字典推导式（高级用法） =====")
 
 # 创建 1~5 的平方字典
-square_dict = {x: x*x for x in range(1, 6)}
+square_dict = {x: x * x for x in range(1, 6)}
 print(square_dict)  # 输出：{1:1, 2:4, 3:9, 4:16, 5:25}
 
 print("\n===== 12. 字典排序 =====")
@@ -129,11 +126,7 @@ print(char_count)
 
 print("\n===== 15. 使用 dict 进行数据映射（项目中极其常见） =====")
 
-status_map = {
-    200: "请求成功",
-    404: "资源不存在",
-    500: "服务器错误"
-}
+status_map = {200: "请求成功", 404: "资源不存在", 500: "服务器错误"}
 
 code = 404
 print(status_map.get(code))  # 输出：资源不存在
