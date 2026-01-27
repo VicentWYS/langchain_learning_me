@@ -225,6 +225,58 @@ def example_4_agent_execution_details():
 
 
 # ============================================================================
+# 示例5：多轮对话 Agent（使用 MemorySaver）
+# ============================================================================
+def example_5_multi_turn_agent():
+    """
+    示例5： 多轮对话 Agent
+
+    - 关键：使用 MemorySaver 保持对话历史
+    - 关键点：
+        - 使用 MemorySaver 作为 checkpointer
+        - 通过 thread_id 区分不同的对话
+        - Agent 自动记住上下文
+        - 不需要手动传递历史消息 
+    """
+    print("\n" + "=" * 40)
+    print("示例5：多轮对话 Agent")
+    print("=" * 40)
+
+    # 创建内存检查点
+    memory = MemorySaver()
+    # 创建带记忆的 Agent
+    agent = create_agent(
+        model=model,
+        tools=[calculator],
+        system_prompt="你是一个智能助手。",
+        checkpointer=memory,  # 添加检查点以支持多轮对话
+    )
+
+    # 使用 thread_id 来保持对话
+    # 这里的 conversation-1 只是一个指定字符串，没有任何特殊含义。
+    # 在真实系统中，往往是：thread_id = user_id/session_id/chat_id...
+    # 例如：thread_id = user_id(具体id的值)，这里就可以设置每个用户都有独立长期记忆
+    config = {"configurable": {"thread_id": "conversation-1"}}
+
+    # 第一轮
+    print("\n用户：10 加 5 等于多少？")
+    response1 = agent.invoke(
+        {"messages": [{"role": "user", "content": "10 加 5 等于多少？"}]},
+        config=config,
+    )
+    print(f"Agent 回复: {response1["messages"][-1].content}")
+
+    # 第二轮：继续上一轮的对话（记忆自动保持）
+    print("\n用户：再乘以 3 呢？")
+    response2 = agent.invoke(
+        {"messages": [{"role": "user", "content": "再乘以 3 呢？"}]},
+        config=config,  # 使用相同的 thread_id
+    )
+
+    print(f"Agent: {response2["messages"][-1].content}")
+
+
+# ============================================================================
 # 主程序
 # ============================================================================
 def main():
@@ -236,7 +288,8 @@ def main():
         # example_1_basic_agent()
         # example_2_multi_tool_agent()
         # example_3_agent_with_system_prompt()
-        example_4_agent_execution_details()
+        # example_4_agent_execution_details()
+        example_5_multi_turn_agent()
 
         print("\n" + "=" * 80)
         print("完成！")
