@@ -177,9 +177,9 @@ def example_4_model_parameters():
 
     init_chat_model 支持的常用参数：
     - temperature: 控制输出的随机性（0.0-2.0）
-        * 0.0: 最有确定性，输出几乎不变
-        * 1.0: 默认值，平衡创造性和一致性
-        * 2.0: 最随机，最有创造性
+        - 0.0: 最有确定性，输出几乎不变
+        - 1.0: 默认值，平衡创造性和一致性
+        - 2.0: 最随机，最有创造性
     - max_tokens: 限制输出的最大 token 数量
     - model_kwargs: 传递给底层模型的额外参数
     """
@@ -235,10 +235,10 @@ def example_5_response_structure():
     示例5：深入理解 invoke 返回值
 
     invoke 方法返回一个 AIMessage 对象，包含：
-    - content: 模型的文本回复
-    - response_metadata: 响应元数据（如 token 使用量、模型信息等）
-    - additional_kwargs: 额外的关键字参数
-    - id: 消息 ID
+        - content: 模型的文本回复
+        - response_metadata: 响应元数据（如 token 使用量、模型信息等）
+        - additional_kwargs: 额外的关键字参数
+        - id: 消息 ID
     """
     print("\n" + "=" * 40)
     print("示例5：invoke 返回值详解")
@@ -276,10 +276,10 @@ def example_6_error_handling():
     示例6：正确的错误处理
 
     在实际应用中，应该处理可能的错误：
-    - API 密钥无效
-    - 网络连接问题
-    - 速率限制
-    - 模型不可用
+        - API 密钥无效
+        - 网络连接问题
+        - 速率限制
+        - 模型不可用
     """
     print("\n" + "=" * 40)
     print("示例6：错误处理最佳实践")
@@ -310,10 +310,7 @@ def example_7_multiple_models():
     示例7：使用不同的模型
 
     LangChain 1.0 的优势是可以轻松切换不同的模型提供商
-    只需要修改模型字符串：
-    - "groq:llama-3.3-70b-versatile"
-    - "groq:mixtral-8x7b-32768"
-    - "groq:gemma2-9b-it"
+        - 只需要修改模型设定参数
     """
     print("\n" + "=" * 40)
     print("示例 7：对比不同模型的输出")
@@ -352,12 +349,12 @@ def main():
 
     try:
         # 运行所有示例
-        example_1_simple_invoke()
-        example_2_messages()
-        example_3_dict_messages()
-        example_4_model_parameters()
-        example_5_response_structure()
-        example_6_error_handling()
+        # example_1_simple_invoke()
+        # example_2_messages()
+        # example_3_dict_messages()
+        # example_4_model_parameters()
+        # example_5_response_structure()
+        # example_6_error_handling()
         example_7_multiple_models()
 
         print("\n" + "=" * 80)
