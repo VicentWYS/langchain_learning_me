@@ -1,285 +1,250 @@
-# 04 - Custom Tools (自定义工具)
+# 📦 LangChain 1.0 自定义工具（@tool）知识总结
 
-## 核心概念
+> 核心一句话：
+> **@tool = 把普通 Python 函数，变成 LLM 可理解、可调用的能力模块**
 
-**工具 (Tool) = 给 AI 的函数**
+👉 **@tool 装饰器 = LLM 能力扩展的入口**
 
-使用 `@tool` 装饰器，让 AI 能调用你的 Python 函数。
+---
 
-## @tool 基本用法
+## 🧠 一、@tool 本质做了什么？
+
+当你写：
 
 ```python
-from langchain_core.tools import tool
-
 @tool
-def get_weather(city: str) -> str:
-    """
-    获取指定城市的天气信息
-
-    参数:
-        city: 城市名称，如"北京"、"上海"
-
-    返回:
-        天气信息字符串
-    """
-    # 你的实现
-    return "晴天，温度 15°C"
+def get_current_time() -> str:
+    """获取当前时间"""
 ```
 
-### 关键要点
+LangChain 会自动：
 
-| 必需项         | 说明                                 |
-| -------------- | ------------------------------------ |
-| `@tool` 装饰器 | 声明这是一个工具                     |
-| **docstring**  | AI 读这个来理解工具用途 ⚠️ 非常重要！ |
-| 类型注解       | 参数和返回值的类型                   |
-| 返回 `str`     | 工具应该返回字符串（AI 最容易理解）  |
+| 提取内容 | 来源        | 用途            |
+| ---- | --------- | ------------- |
+| 工具名称 | 函数名       | LLM 调用时使用     |
+| 工具描述 | docstring | LLM 判断是否该用此工具 |
+| 参数结构 | 类型注解      | 生成 JSON 参数    |
+| 返回值  | 函数返回      | 作为工具结果喂给 LLM  |
 
-## 工具的 docstring
+👉 **函数 → Tool 对象（拥有 `.invoke()`）**
 
-**AI 依赖 docstring 来理解工具！**
+---
+
+## ✍️ 二、docstring 为什么极其重要？
+
+> ❗LLM 不看你的函数代码，只看 docstring
+
+标准格式：
 
 ```python
 @tool
-def my_tool(param: str) -> str:
+def my_tool(param1: str) -> str:
     """
-    工具的简短描述（AI 读这个！）
+    工具的简短描述
 
     参数:
-        param: 参数说明
+        param1: 参数说明
 
     返回:
         返回值说明
     """
-    ...
 ```
 
-### 好的 vs 不好的 docstring
+LLM 通过它判断：
+
+* 什么时候该用这个工具
+* 如何构造参数 JSON
+* 这个工具能解决什么问题
+
+---
+
+## 🧩 三、参数类型注解的作用
 
 ```python
-# ❌ 不好：太模糊
-@tool
-def tool1(x: str) -> str:
-    """做一些事情"""
-    ...
-
-# ✅ 好：清晰明确
-@tool
-def search_products(query: str) -> str:
-    """
-    在产品数据库中搜索产品
-
-    参数:
-        query: 搜索关键词，如"笔记本电脑"、"手机"
-
-    返回:
-        产品列表的 JSON 字符串
-    """
-    ...
+def calculator(operation: str, a: int, b: int) -> str:
 ```
 
-## 参数类型
+类型注解会被转成：
 
-### 1. 单参数
-```python
-@tool
-def get_weather(city: str) -> str:
-    """获取指定城市的天气"""
-    ...
+```json
+{
+  "operation": "string",
+  "a": "integer",
+  "b": "integer"
+}
 ```
 
-### 2. 多参数
-```python
-@tool
-def calculator(operation: str, a: float, b: float) -> str:
-    """
-    执行数学计算
+👉 LLM 根据这个 **自动生成调用参数**
 
-    参数:
-        operation: "add", "subtract", "multiply", "divide"
-        a: 第一个数字
-        b: 第二个数字
-    """
-    ...
+支持类型：
+
+* `str`
+* `int`
+* `float`
+* `bool`
+* `Optional[type]`
+
+---
+
+## 🛠 四、工具如何测试？
+
+被 `@tool` 修饰后：
+
+```python
+result = tool.invoke({...})
 ```
 
-### 3. 可选参数
-```python
-from typing import Optional
+这一步非常关键：
 
-@tool
+> **开发工具时，永远先 .invoke() 测试，而不是先给 Agent 用**
+
+---
+
+## 🧮 五、多参数工具示例（计算器）
+
+```python
+calculator.invoke({
+    "operation": "add",
+    "a": 10,
+    "b": 5
+})
+```
+
+说明：
+
+* LLM 会自己构造这个 JSON
+* 前提是你 docstring 和类型写得足够清晰
+
+---
+
+## ⚙️ 六、可选参数设计（非常重要）
+
+```python
 def web_search(query: str, num_results: Optional[int] = 3) -> str:
-    """
-    搜索网页
-
-    参数:
-        query: 搜索关键词
-        num_results: 返回结果数量，默认 3
-    """
-    ...
 ```
 
-## 调用工具
+LLM 行为：
 
-工具有两种调用方式：
+* 用户没说 → 用默认值
+* 用户说了 → 覆盖默认值
 
-### 1. 直接调用（测试用）
+👉 **这是工具设计的高级技巧**
+
+---
+
+## 🔗 七、工具绑定到模型（让 LLM 知道它可以用工具）
+
 ```python
-# 使用 .invoke() 方法
-result = get_weather.invoke({"city": "北京"})
-print(result)  # "晴天，温度 15°C"
+model_with_tools = model.bind_tools([get_weather, calculator])
 ```
 
-### 2. 绑定到模型（让 AI 调用）
+此时 LLM 获得能力：
+
+> “我可以决定是否调用这些工具”
+
+检查是否触发工具：
+
 ```python
-from langchain.chat_models import init_chat_model
-
-model = init_chat_model("groq:llama-3.3-70b-versatile")
-
-# 绑定工具
-model_with_tools = model.bind_tools([get_weather])
-
-# AI 可以决定是否调用工具
-response = model_with_tools.invoke("北京天气如何？")
-
-# 检查 AI 是否要调用工具
 if response.tool_calls:
-    print("AI 想调用工具：", response.tool_calls)
-else:
-    print("AI 直接回答：", response.content)
 ```
 
-## 工具属性
+---
 
-创建工具后，可以查看其属性：
+## 🧱 八、工具开发黄金原则（非常重要）
+
+### ✅ 1. 清晰 docstring（最重要）
+
+### ✅ 2. 明确类型注解
+
+### ✅ 3. 永远返回 `str`
+
+> 复杂数据 → JSON 字符串
+
+### ✅ 4. 工具内部要做异常处理
 
 ```python
-@tool
-def my_tool(param: str) -> str:
-    """工具描述"""
+try:
     ...
-
-print(my_tool.name)         # "my_tool"
-print(my_tool.description)  # "工具描述"
-print(my_tool.args)         # 参数模式
+except Exception as e:
+    return f"错误：{e}"
 ```
 
-## 最佳实践
+### ✅ 5. 一个工具只做一件事（单一职责）
 
-### 1. 清晰的描述
-```python
-# ✅ 好
-@tool
-def search_flights(origin: str, destination: str, date: str) -> str:
-    """
-    搜索航班信息
-
-    参数:
-        origin: 出发城市，如"北京"
-        destination: 目的地城市，如"上海"
-        date: 出发日期，格式 YYYY-MM-DD
-
-    返回:
-        可用航班的 JSON 列表
-    """
-```
-
-### 2. 功能单一
-```python
-# ❌ 不好：一个工具做太多事
-@tool
-def do_everything(action: str, data: str) -> str:
-    """做各种事情"""
-    if action == "weather": ...
-    elif action == "calculate": ...
-    elif action == "search": ...
-
-# ✅ 好：每个工具做一件事
-@tool
-def get_weather(city: str) -> str:
-    """获取天气"""
-    ...
-
-@tool
-def calculator(operation: str, a: float, b: float) -> str:
-    """计算"""
-    ...
-```
-
-### 3. 错误处理
-```python
-@tool
-def divide(a: float, b: float) -> str:
-    """
-    除法计算
-
-    参数:
-        a: 被除数
-        b: 除数
-    """
-    try:
-        if b == 0:
-            return "错误：除数不能为零"
-        result = a / b
-        return f"{a} / {b} = {result}"
-    except Exception as e:
-        return f"计算错误：{e}"
-```
-
-### 4. 返回字符串
-```python
-# ✅ 好：返回字符串
-@tool
-def get_user_info(user_id: str) -> str:
-    """获取用户信息"""
-    user = {"id": user_id, "name": "张三"}
-    return json.dumps(user, ensure_ascii=False)  # 转成 JSON 字符串
-
-# ❌ 不好：返回字典（某些情况可能有问题）
-@tool
-def get_user_info(user_id: str) -> dict:
-    """获取用户信息"""
-    return {"id": user_id, "name": "张三"}
-```
-
-## 测试工具
-
-每个工具文件都可以直接运行测试：
+错误示例：
 
 ```python
-# 在文件末尾添加
-if __name__ == "__main__":
-    print("测试工具：")
-    print(my_tool.invoke({"param": "test"}))
+def search_and_calculate_and_save():
 ```
 
-运行测试：
-```bash
-python tools/weather.py
+正确做法：拆成多个 tool。
+
+---
+
+## 🧪 九、开发顺序（专业流程）
+
+1. 写普通函数
+2. 加 `@tool`
+3. 补全 docstring
+4. `.invoke()` 单测
+5. bind 到 model
+6. 再交给 Agent
+
+---
+
+## 🪟 十、Windows 终端 UTF-8 处理的意义
+
+这段代码：
+
+```python
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 ```
 
-## 项目结构
+解决：
+
+> Windows 默认 GBK，LLM 输出 UTF-8 → 中文乱码
+
+---
+
+## 🧠 十一、这一节的真正核心思想
+
+> **LangChain 的 Agent 本质 = LLM + 一堆 @tool**
+
+不是：
+
+> Agent 很复杂
+
+而是：
+
+> 工具设计决定 Agent 上限
+
+---
+
+## 🧭 十二、你需要形成的认知模型
 
 ```
-04_custom_tools/
-├── main.py                # 6 个示例
-├── README.md              # 本文件
-└── tools/                 # 工具目录
-    ├── weather.py         # 天气工具
-    ├── calculator.py      # 计算器工具
-    └── web_search.py      # 搜索工具
+Python函数
+   ↓ @tool
+LangChain Tool
+   ↓ bind_tools
+LLM 获得“外部能力”
+   ↓ Agent
+LLM 自动调用工具完成复杂任务
 ```
 
-## 运行示例
+---
 
-```bash
-# 测试单个工具
-python tools/weather.py
+## 📝 Checklist（写工具前必看）
 
-# 运行所有示例
-python main.py
-```
+* [ ] 函数功能是否单一？
+* [ ] docstring 是否清晰描述“何时用”？
+* [ ] 参数是否有类型注解？
+* [ ] 是否有默认参数？
+* [ ] 是否只返回字符串？
+* [ ] 是否可单独 `.invoke()` 测试？
 
-## 下一步
+---
 
-**05_simple_agent** - 使用 `create_agent` 让 AI 自动调用这些工具
+## 🚀 一句话总结
+
+> **你不是在写函数，你是在给 LLM 安装“外挂能力模块”**

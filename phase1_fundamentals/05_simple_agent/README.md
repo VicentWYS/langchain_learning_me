@@ -1,236 +1,176 @@
-# 05 - Simple Agent (简单 Agent)
+# LangChain 1.0 - Simple Agent 知识点总结
 
-## 核心概念
+## 1. 核心概念
 
-**Agent = 模型 + 工具 + 自动决策**
+### 1.1 Agent
 
-Agent 的关键能力：
-- 理解用户问题
-- 自动判断是否需要工具
-- 选择合适的工具
-- 基于工具结果生成回答
+* **定义**：Agent 是一个智能实体，能够根据用户输入自动决定是否调用工具，并生成回答。
+* **创建方式（1.0 API）**：`create_agent(model, tools, system_prompt, checkpointer=None)`
 
-## create_agent 基本用法
+  * `model`：聊天模型实例
+  * `tools`：工具列表（如天气查询、计算器、网页搜索）
+  * `system_prompt`：系统提示词，用于控制 Agent 的行为和语气
+  * `checkpointer`：可选，多轮对话记忆存储（如 `MemorySaver`）
 
-```python
-from langchain.agents import create_agent
-from langchain.chat_models import init_chat_model
+### 1.2 工具（Tool）
 
-agent = create_agent(
-    model=init_chat_model("groq:llama-3.3-70b-versatile"),
-    tools=[tool1, tool2],
-    system_prompt="Agent 的行为指令"  # 可选
-)
+* **作用**：Agent 可以调用工具完成特定任务。
+* **特点**：
 
-response = agent.invoke({
-    "messages": [{"role": "user", "content": "问题"}]
-})
-```
+  * 每个工具带有 docstring 描述功能
+  * Agent 会自动判断是否需要使用工具
+* **示例工具**：
 
-### 参数说明
+  * `get_weather`：天气查询
+  * `calculator`：计算器
+  * `web_search`：网页搜索
 
-| 参数            | 说明                      | 必需 |
-| --------------- | ------------------------- | ---- |
-| `model`         | 语言模型                  | ✅    |
-| `tools`         | 工具列表                  | ✅    |
-| `system_prompt` | 系统提示，定义 Agent 行为 | ❌    |
+### 1.3 多轮对话
 
-## Agent 执行循环
+* **关键点**：
 
-```
-用户问题
-   ↓
-[Agent 分析]
-   ↓
-需要工具？ ─── 否 ──→ 直接回答
-   ↓ 是
-调用工具
-   ↓
-获取结果
-   ↓
-生成回答
-```
+  * 使用 `MemorySaver` 保持对话历史
+  * `thread_id` 区分不同用户或会话
+  * Agent 自动记忆上下文，无需手动传递历史消息
 
-### 完整流程示例
+---
 
-```python
-# 问题：北京天气如何？
+## 2. 创建 Agent 示例
 
-# 步骤1：用户提问
-messages = [HumanMessage("北京天气如何？")]
+### 示例1：最简单 Agent
 
-# 步骤2：AI 决定调用工具
-# AIMessage(tool_calls=[{
-#     "name": "get_weather",
-#     "args": {"city": "北京"}
-# }])
-
-# 步骤3：执行工具
-# ToolMessage("晴天，温度 15°C")
-
-# 步骤4：AI 生成最终答案
-# AIMessage("北京今天是晴天，温度 15°C")
-```
-
-## 多工具选择
-
-Agent 如何选择工具？
-
-**依据：工具的 docstring**
-
-```python
-@tool
-def get_weather(city: str) -> str:
-    """获取指定城市的天气信息"""  # ← AI 读这个！
-    ...
-
-@tool
-def calculator(operation: str, a: float, b: float) -> str:
-    """执行基本的数学计算"""  # ← AI 也读这个！
-    ...
-```
-
-AI 会根据：
-1. 问题内容
-2. 每个工具的描述
-3. 自动选择最匹配的工具
-
-## 多轮对话
-
-**关键：传入历史消息**
-
-```python
-# 第一轮
-response1 = agent.invoke({
-    "messages": [{"role": "user", "content": "10 + 5"}]
-})
-
-# 第二轮（带历史）
-response2 = agent.invoke({
-    "messages": response1['messages'] + [
-        {"role": "user", "content": "再乘以 3"}
-    ]
-})
-```
-
-## 常见问题
-
-### 1. Agent 不调用工具？
-
-**原因：**
-- 工具的 docstring 不清晰
-- 问题表述不明确
-- 模型认为不需要工具
-
-**解决：**
-```python
-# ❌ 不好
-@tool
-def tool1(x: str) -> str:
-    """做一些事情"""  # 太模糊
-
-# ✅ 好
-@tool
-def get_weather(city: str) -> str:
-    """
-    获取指定城市的实时天气信息
-
-    参数:
-        city: 城市名称，如"北京"、"上海"
-    """
-```
-
-### 2. Agent 选错工具？
-
-**原因：**
-- 多个工具的功能描述相似
-- 工具太多导致混淆
-
-**解决：**
-- 只给必要的工具
-- 工具描述要有明确区分
-- 在 system_prompt 中说明工具使用场景
-
-### 3. Agent 返回什么？
-
-```python
-response = agent.invoke({"messages": [...]})
-
-# response 是字典
-{
-    "messages": [
-        HumanMessage(...),      # 用户问题
-        AIMessage(...),          # AI 工具调用
-        ToolMessage(...),        # 工具结果
-        AIMessage(...)           # 最终回答 ← 通常取这个
-    ]
-}
-
-# 获取最终回答
-final_answer = response['messages'][-1].content
-```
-
-## 最佳实践
-
-### 1. 工具配置
-```python
-# ✅ 好：只给需要的工具
-agent = create_agent(
-    model=model,
-    tools=[get_weather, calculator]  # 2-5 个工具最佳
-)
-
-# ❌ 不好：工具太多
-agent = create_agent(
-    model=model,
-    tools=[tool1, tool2, ..., tool20]  # 会混淆
-)
-```
-
-### 2. System Prompt
 ```python
 agent = create_agent(
     model=model,
     tools=[get_weather],
-    system_prompt="""你是天气助手。
-
-工作流程：
-1. 理解用户的城市查询
-2. 使用 get_weather 工具获取数据
-3. 简洁清晰地回答
-
-输出格式：
-- 天气状况
-- 温度
-- 注意事项（如有）
-"""
+    system_prompt="你是一名智能助手，可以查询天气信息。",
 )
 ```
 
-### 3. 错误处理
+* **特点**：
+
+  * 只配置一个工具
+  * Agent 自动判断是否使用工具
+  * 普通问题直接回答，无需工具
+
+---
+
+### 示例2：多工具 Agent
+
 ```python
-try:
-    response = agent.invoke({
-        "messages": [{"role": "user", "content": question}]
-    })
-    answer = response['messages'][-1].content
-except Exception as e:
-    print(f"Agent 错误：{e}")
+agent = create_agent(
+    model=model,
+    tools=[get_weather, calculator, web_search],
+    system_prompt="你是一名智能助手。",
+)
 ```
 
-## 运行示例
+* **特点**：
 
-```bash
-# 确保已安装依赖
-pip install langchain langchain-groq python-dotenv
+  * 根据问题自动选择合适工具
+  * 工具 docstring 帮助 Agent 理解用途
+  * 可处理多种类型问题（如天气查询、计算、搜索）
 
-# 设置 API Key（.env 文件）
-GROQ_API_KEY=your_key_here
+---
 
-# 运行
-python main.py
+### 示例3：自定义 Agent 行为（系统提示）
+
+```python
+system_messages = """你是一个友好的智能助手。
+特点：
+  - 回答简介明了
+  - 使用工具前会先说明
+  - 结果用表格或列表清晰展示"""
+agent = create_agent(
+    model=model,
+    tools=[get_weather, calculator, web_search],
+    system_prompt=system_messages,
+)
 ```
 
-## 下一步
+* **system_prompt** 可是字符串或 `SystemMessage` 对象
+* 控制 Agent 输出风格、语气和流程
 
-**06_agent_loop** - 深入理解 Agent 执行循环的底层机制
+---
+
+### 示例4：Agent 执行流程详解
+
+* **执行循环**：
+
+  1. 用户提问 → `HumanMessage`
+  2. AI 判断是否调用工具 → `AIMessage`（含 `tool_calls`）
+  3. 执行工具 → `ToolMessage`（返回结果）
+  4. AI 根据结果生成最终回答 → `AIMessage`
+
+* **消息类型**：
+
+  * `HumanMessage`：用户输入
+  * `AIMessage`：模型生成
+  * `ToolMessage`：工具返回结果
+
+---
+
+### 示例5：多轮对话 Agent（MemorySaver）
+
+```python
+memory = MemorySaver()
+agent = create_agent(
+    model=model,
+    tools=[calculator],
+    system_prompt="你是一个智能助手。",
+    checkpointer=memory,
+)
+```
+
+* **多轮对话特点**：
+
+  * `thread_id` 用于区分不同对话
+  * Agent 自动记住上下文
+  * 可连续提问，例如：
+
+    * 第1轮：`10 + 5 = ?`
+    * 第2轮：`再乘以 3 呢？` → 会基于上一轮记忆计算
+
+---
+
+## 3. 使用建议与注意点
+
+1. **工具配置**
+
+   * 工具 docstring 很重要，Agent 根据 docstring 理解用途
+   * 工具数量过多可能影响性能，推荐核心必需工具
+
+2. **系统提示**
+
+   * `system_prompt` 用于：
+
+     * 控制语气（友好/简洁/正式）
+     * 指定回答格式（列表/表格/文本）
+     * 指定工作流程（先说明再使用工具等）
+
+3. **多轮对话管理**
+
+   * 使用 `MemorySaver` 或自定义 checkpointer
+   * `thread_id` 区分不同用户或会话
+   * 可以实现长期上下文记忆
+
+4. **调试执行流程**
+
+   * 通过查看消息历史（`response["messages"]`）理解 Agent 决策过程
+   * 检查 `tool_calls` 来确认工具是否被调用
+
+---
+
+## 4. 总结
+
+* **LangChain 1.0 重点更新**：
+
+  * 使用 `create_agent` 替代旧版 `create_react_agent`
+  * 支持多工具自动选择
+  * 支持自定义系统提示
+  * 支持多轮对话记忆（MemorySaver）
+* **Agent 核心能力**：
+
+  * 自动判断是否使用工具
+  * 基于工具执行操作并生成答案
+  * 可保持上下文，实现连续对话
